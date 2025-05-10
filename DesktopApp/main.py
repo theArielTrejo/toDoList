@@ -5,6 +5,8 @@ from PIL import Image, ImageTk  # pip install pillow
 from datetime import datetime
 import sys
 import os
+import subprocess
+import platform
 
 # Add parent directory to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -25,6 +27,7 @@ class TaskManagementApp:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title(f"{APP_TITLE} v{APP_VERSION}")
+        self.root.configure(bg="black")
         self.db = DatabaseManager()
         self.current_user = None
         self.show_login()
@@ -37,6 +40,7 @@ class TaskManagementApp:
 
         # Main container frame
         main_frame = ttk.Frame(self.root, padding="20")
+        main_frame = tk.Frame(self.root, bd=2, relief="solid", highlightbackground="black", highlightthickness=10)
         main_frame.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
         # Configure grid weights to center content
@@ -64,7 +68,7 @@ class TaskManagementApp:
 
         # Create a content frame for the login form
         content_frame = ttk.Frame(main_frame)
-        content_frame.grid(row=1, column=1, sticky=(tk.N, tk.S, tk.E, tk.W))
+        content_frame.grid(row=1, column=0, sticky="", columnspan=3)
 
         # Login form frame
         login_frame = ttk.LabelFrame(content_frame, text="Login", padding="20")
@@ -101,10 +105,12 @@ class TaskManagementApp:
         main_frame.columnconfigure(1, weight=2)
         main_frame.columnconfigure(2, weight=1)
         main_frame.rowconfigure(1, weight=1)
+        # Make sure we have a row that will expand to fill the space
+        main_frame.rowconfigure(2, weight=1)
 
         # Left side - Boss Cat image
         left_frame = ttk.Frame(main_frame)
-        left_frame.grid(row=1, column=0, sticky=(tk.S, tk.W))
+        left_frame.grid(row=10, column=0, sticky="sw")
 
         self.bossimage = Image.open(os.path.join(os.path.dirname(__file__), "bosscat.png"))
         self.bossimage = self.bossimage.resize((180, 180), Image.Resampling.LANCZOS)
@@ -114,21 +120,21 @@ class TaskManagementApp:
 
         # Right side - Text bubble image
         right_frame = ttk.Frame(main_frame)
-        right_frame.grid(row=1, column=2, sticky=(tk.S, tk.E))
+        right_frame.grid(row=9, column=0, padx=0, pady=5, rowspan=1)
 
         self.textboximage = Image.open(os.path.join(os.path.dirname(__file__), "textbox.png"))
         self.textboximage = self.textboximage.resize((180, 180), Image.Resampling.LANCZOS)
         self.textphoto = ImageTk.PhotoImage(self.textboximage)
         text_pic_label = ttk.Label(right_frame, image=self.textphoto)
-        text_pic_label.pack(side=tk.BOTTOM, anchor=tk.SE)
+        text_pic_label.pack(side=tk.BOTTOM, anchor=tk.W)
 
     def show_register(self):
         self.clear_window()
         # Brings the window to fullscreen - cross-platform approach
         self.maximize_window()
 
-        # Main container frame
         main_frame = ttk.Frame(self.root, padding="20")
+        main_frame = tk.Frame(self.root, bd=2, relief="solid", highlightbackground="black", highlightthickness=10)
         main_frame.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
 
         # Configure grid weights to center content
@@ -149,7 +155,7 @@ class TaskManagementApp:
 
         # Create a content frame for the registration form
         content_frame = ttk.Frame(main_frame)
-        content_frame.grid(row=1, column=1, sticky=(tk.N, tk.S, tk.E, tk.W))
+        content_frame.grid(row=1, column=1, sticky=tk.NS)
 
         # Registration form frame
         register_frame = ttk.LabelFrame(content_frame, text="Enter Your Information", padding="20")
@@ -197,20 +203,12 @@ class TaskManagementApp:
         main_frame.columnconfigure(2, weight=1)
         main_frame.rowconfigure(1, weight=1)
 
-        # Left side - Boss Cat image (reuse from login screen)
-        left_frame = ttk.Frame(main_frame)
-        left_frame.grid(row=1, column=0, sticky=(tk.S, tk.W))
-
-        self.bossimage = Image.open(os.path.join(os.path.dirname(__file__), "bosscat.png"))
-        self.bossimage = self.bossimage.resize((180, 180), Image.Resampling.LANCZOS)
-        self.bossphoto = ImageTk.PhotoImage(self.bossimage)
-        boss_pic_label = ttk.Label(left_frame, image=self.bossphoto)
-        boss_pic_label.pack(side=tk.BOTTOM, anchor=tk.SW)
-
-
     def show_main_window(self):
         self.clear_window()
         self.root.geometry(MAIN_WINDOW_SIZE)
+
+        # Track whether to show completed tasks
+        self.show_completed = tk.BooleanVar(value=False)
 
         # Main Frame
         main_frame = ttk.Frame(self.root, padding="10")
@@ -220,12 +218,25 @@ class TaskManagementApp:
         header_frame = ttk.Frame(main_frame)
         header_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
 
-        ttk.Label(header_frame, text=f"Welcome, {self.current_user['username']}!", font=('Helvetica', 12, 'bold')).pack(side=tk.LEFT)
+        ttk.Label(header_frame, text=f"Welcome, {self.current_user['username']}!", font=('Helvetica', 12, 'bold')).pack(
+            side=tk.LEFT)
         ttk.Button(header_frame, text="Logout", command=self.show_login).pack(side=tk.RIGHT)
+
+        # Display options frame
+        options_frame = ttk.Frame(main_frame)
+        options_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=5)
+
+        # Checkbox for showing completed tasks
+        ttk.Checkbutton(
+            options_frame,
+            text="Show Completed Tasks",
+            variable=self.show_completed,
+            command=self.load_assignments
+        ).pack(side=tk.LEFT, padx=5)
 
         # Assignment List
         list_frame = ttk.LabelFrame(main_frame, text="Assignments", padding="5")
-        list_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5)
+        list_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5)
 
         # Create Treeview
         columns = ('ID', 'Name', 'Due Date', 'Status', 'Creator')
@@ -245,24 +256,166 @@ class TaskManagementApp:
 
         # Buttons Frame
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=2, column=0, columnspan=2, pady=5)
+        button_frame.grid(row=3, column=0, columnspan=2, pady=5)
 
         if self.current_user['is_admin']:
-            ttk.Button(button_frame, text="Create Assignment", command=self.show_create_assignment).pack(side=tk.LEFT, padx=5)
+            ttk.Button(button_frame, text="Create Assignment", command=self.show_create_assignment).pack(side=tk.LEFT,
+                                                                                                         padx=5)
             ttk.Button(button_frame, text="Manage Users", command=self.show_user_management).pack(side=tk.LEFT, padx=5)
 
         ttk.Button(button_frame, text="View Details", command=self.show_assignment_details).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Change Status", command=self.change_status_assignment).pack(side=tk.RIGHT,
+                                                                                                   padx=5)
 
         # Configure grid weights
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(1, weight=1)
+        main_frame.rowconfigure(2, weight=1)  # Change to row 2 for list_frame
         list_frame.columnconfigure(0, weight=1)
         list_frame.rowconfigure(0, weight=1)
 
         # Load assignments
         self.load_assignments()
+
+    def play_completion_video(self):
+        """
+        Play a video to celebrate task completion using the default media player
+        """
+        # Check if the video file exists
+        COMPLETION_VIDEO_PATH = "catdancing.mp4"
+        if not os.path.exists(COMPLETION_VIDEO_PATH):
+            messagebox.showerror("Error", f"Completion video not found at: {COMPLETION_VIDEO_PATH}")
+            return
+
+        # Launch the video with the system's default media player
+        try:
+            if platform.system() == 'Darwin':  # macOS
+                subprocess.Popen(['open', COMPLETION_VIDEO_PATH])
+            elif platform.system() == 'Windows':
+                os.startfile(COMPLETION_VIDEO_PATH)
+            else:  # Linux and other OS
+                subprocess.Popen(['xdg-open', COMPLETION_VIDEO_PATH])
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to play video: {str(e)}")
+
+    def change_status_assignment(self):
+        selected_items = self.tree.selection()
+        if not selected_items:
+            messagebox.showwarning("Warning", "Please select an assignment to change status!")
+            return
+
+        assignment_id = self.tree.item(selected_items[0])['values'][0]
+        assignment_name = self.tree.item(selected_items[0])['values'][1]
+        current_status = self.tree.item(selected_items[0])['values'][3]
+
+        # Create dialog window
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Change Assignment Status")
+        dialog.geometry("400x300")
+        dialog.grab_set()  # Make the dialog modal
+
+        # Create frame
+        status_frame = ttk.Frame(dialog, padding="20")
+        status_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Assignment info
+        ttk.Label(
+            status_frame,
+            text=f"Assignment: {assignment_name}",
+            font=('Helvetica', 12, 'bold')
+        ).pack(pady=(0, 20))
+
+        # Current status display
+        ttk.Label(
+            status_frame,
+            text=f"Current Status: {current_status}",
+            font=('Helvetica', 10)
+        ).pack(pady=(0, 20))
+
+        # Add switch for completed status
+        switch_frame = ttk.Frame(status_frame)
+        switch_frame.pack(pady=10)
+
+        ttk.Label(
+            switch_frame,
+            text="Mark as Completed:",
+            font=('Helvetica', 10)
+        ).grid(row=0, column=0, padx=(0, 10))
+
+        # Switch/toggle variable
+        is_completed = tk.BooleanVar()
+        is_completed.set(current_status.lower() == "completed")
+
+        # Create custom switch
+        switch_canvas = tk.Canvas(switch_frame, width=60, height=30, bd=0, highlightthickness=0)
+        switch_canvas.grid(row=0, column=1)
+
+        # Function to update switch appearance
+        def update_switch():
+            switch_canvas.delete("all")
+            if is_completed.get():
+                # Green background when on
+                switch_canvas.create_rectangle(0, 0, 60, 30, fill="#4CAF50", outline="", width=0, tags="switch_bg")
+                # White circle on right
+                switch_canvas.create_oval(30, 0, 60, 30, fill="white", outline="", width=0, tags="switch_handle")
+            else:
+                # Gray background when off
+                switch_canvas.create_rectangle(0, 0, 60, 30, fill="#ccc", outline="", width=0, tags="switch_bg")
+                # White circle on left
+                switch_canvas.create_oval(0, 0, 30, 30, fill="white", outline="", width=0, tags="switch_handle")
+
+        # Toggle function
+        def toggle_switch(event=None):
+            is_completed.set(not is_completed.get())
+            update_switch()
+
+        # Make the switch clickable
+        switch_canvas.bind("<Button-1>", toggle_switch)
+
+        # Draw initial state
+        update_switch()
+
+        # Buttons
+        button_frame = ttk.Frame(status_frame)
+        button_frame.pack(pady=20, side=tk.BOTTOM)
+
+        def submit_status_change():
+            try:
+                new_status = "Completed" if is_completed.get() else "In Progress"
+                # Update in the correct table
+                with self.db.conn as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE tasks_assignment SET status = ?, updated_at = datetime('now') WHERE id = ?",
+                        (new_status, assignment_id)
+                    )
+                    conn.commit()
+                self.load_assignments()  # Refresh the assignments list
+                dialog.destroy()
+
+                # If task is marked as completed, play the completion video
+                if new_status == "Completed":
+                    self.play_completion_video()
+                else:
+                    messagebox.showinfo("Success", f"Status updated to {new_status}!")
+
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to update status: {str(e)}")
+                print(str(e))
+
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            command=dialog.destroy
+        ).grid(row=0, column=0, padx=5)
+
+        ttk.Button(
+            button_frame,
+            text="Submit",
+            command=submit_status_change
+        ).grid(row=0, column=1, padx=5)
+
 
     def show_create_assignment(self):
         dialog = tk.Toplevel(self.root)
@@ -369,14 +522,22 @@ class TaskManagementApp:
 
         def update_status():
             try:
-                self.db.update_assignment_status(assignment_id, status_var.get())
+                new_status = status_var.get()
+                self.db.update_assignment_status(assignment_id, new_status)
                 self.load_assignments()
                 dialog.destroy()
-                messagebox.showinfo("Success", "Status updated successfully!")
+
+                # If task is marked as completed, play the completion video
+                if new_status == "Completed":
+                    self.play_completion_video()
+                else:
+                    messagebox.showinfo("Success", f"Status updated to {new_status}!")
+
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to update status: {str(e)}")
 
-        ttk.Button(details_frame, text="Update Status", command=update_status).grid(row=6, column=0, columnspan=2, pady=10)
+        ttk.Button(details_frame, text="Update Status", command=update_status).grid(row=6, column=0, columnspan=2,
+                                                                                    pady=10)
 
     def show_user_management(self):
         dialog = tk.Toplevel(self.root)
@@ -449,16 +610,32 @@ class TaskManagementApp:
             self.tree.delete(item)
 
         # Load assignments from database
-        assignments = self.db.get_assignments(self.current_user['user_id'], self.current_user['is_admin'])
+        # Use the method correctly with your updated db_manager
+        assignments = self.db.get_assignments(
+            self.current_user['user_id'],
+            self.current_user['is_admin'],
+            include_completed=self.show_completed.get()
+        )
+
         for assignment in assignments:
             # Extract the specific fields we want
             assignment_id = assignment[0]  # id is the first column
-            name = assignment[1]           # name is the second column
-            due_date = assignment[2].strftime('%Y-%m-%d')  # due date is the third column
-            status = assignment[4]         # status is the fifth column
+            name = assignment[1]  # name is the second column
+            due_date = assignment[2]  # due date is the third column
+            status = assignment[4]  # status is the fifth column
             creator_name = assignment[-1]  # creator_name is the last column added in the query
 
-            self.tree.insert('', tk.END, values=(assignment_id, name, due_date, status, creator_name))
+            # Format the date for display
+            formatted_date = due_date.strftime("%Y-%m-%d") if hasattr(due_date, 'strftime') else due_date
+
+            # Insert with different tag based on status
+            tag = status.lower().replace(" ", "_")
+            self.tree.insert('', tk.END, values=(assignment_id, name, formatted_date, status, creator_name),
+                             tags=(tag,))
+
+        # Configure tag colors
+        self.tree.tag_configure('completed', background='#E8F5E9')  # Light green for completed
+        self.tree.tag_configure('in_progress', background='#FFF9C4')  # Light yellow for in progress
 
     def login(self, username, password):
         if not username or not password:

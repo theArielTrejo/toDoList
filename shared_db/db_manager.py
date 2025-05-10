@@ -189,36 +189,47 @@ class DatabaseManager:
             self.conn.rollback()
             raise
 
-    def get_assignments(self, user_id, is_staff):
-        try:
-            cursor = self.conn.cursor()
-            if is_staff:
-                cursor.execute(
-                    """
-                    SELECT a.*, u.username as creator_name
+    def get_assignments(self, user_id, is_admin, include_completed=False):
+        """
+        Get assignments for a user
+
+        Args:
+            user_id (int): The ID of the user
+            is_admin (bool): Whether the user is an admin
+            include_completed (bool): Whether to include completed assignments
+
+        Returns:
+            list: A list of assignments
+        """
+        with self.conn as conn:
+            cursor = conn.cursor()
+
+            if is_admin:
+                # Admin sees all assignments
+                query = """
+                    SELECT a.*, u.username as creator_name 
                     FROM tasks_assignment a
                     LEFT JOIN auth_user u ON a.creator_id = u.id
-                    ORDER BY a.due_date
-                    """
-                )
+                """
+                if not include_completed:
+                    query += " WHERE a.status != 'Completed'"
+
+                cursor.execute(query)
             else:
-                cursor.execute(
-                    """
-                    SELECT a.*, u.username as creator_name
+                # Regular user sees assignments they're assigned to
+                query = """
+                    SELECT a.*, u.username as creator_name 
                     FROM tasks_assignment a
+                    JOIN tasks_assignment_assignees aa ON a.id = aa.assignment_id
                     LEFT JOIN auth_user u ON a.creator_id = u.id
-                    WHERE a.creator_id = ?
-                    OR a.id IN (
-                        SELECT assignment_id FROM tasks_assignment_assignees WHERE user_id = ?
-                    )
-                    ORDER BY a.due_date
-                    """,
-                    (user_id, user_id)
-                )
+                    WHERE aa.user_id = ?
+                """
+                if not include_completed:
+                    query += " AND a.status != 'Completed'"
+
+                cursor.execute(query, (user_id,))
+
             return cursor.fetchall()
-        except Exception as e:
-            print(f"Error getting assignments: {e}")
-            raise
 
     def get_assignment_details(self, assignment_id):
         try:
@@ -252,19 +263,22 @@ class DatabaseManager:
             print(f"Error getting assignment details: {e}")
             raise
 
-    def update_assignment_status(self, assignment_id, status):
-        try:
-            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            cursor = self.conn.cursor()
+    def update_assignment_status(self, assignment_id, new_status):
+        """
+        Update the status of an assignment
+
+        Args:
+            assignment_id (int): The ID of the assignment to update
+            new_status (str): The new status to set
+        """
+        with self.conn as conn:
+            cursor = conn.cursor()
             cursor.execute(
-                "UPDATE tasks_assignment SET status = ?, updated_at = ? WHERE id = ?",
-                (status, now, assignment_id)
+                "UPDATE tasks_assignment SET status = ?, updated_at = datetime('now') WHERE id = ?",
+                (new_status, assignment_id)
             )
-            self.conn.commit()
-        except Exception as e:
-            print(f"Error updating assignment status: {e}")
-            self.conn.rollback()
-            raise
+            conn.commit()
+        return True
 
     def get_all_users(self):
         try:
