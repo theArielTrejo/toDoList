@@ -1,5 +1,13 @@
 #  **To Do List Application**
 
+## GROUP MEMBERS:
+   - Ariel Trejo Renteria
+   - Raul Perez
+   - Nikhil Khatwani
+   - Luis Lozano
+
+
+
 This is a unified task management application with both desktop and web interfaces that share the same SQLite database.
 
 ## Project Structure
