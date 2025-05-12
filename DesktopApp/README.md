@@ -20,7 +20,6 @@ A desktop application for managing tasks and assignments with role-based access 
 ## Prerequisites
 
 - Python 3.8 or higher
-- PostgreSQL 12 or higher
 - pip (Python package installer)
 
 ## Installation
@@ -42,12 +41,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Create a PostgreSQL database:
-```sql
-CREATE DATABASE task_management;
-```
-
-5. Update the database configuration in `config.py`:
+4. Update the database configuration in `config.py`:
 ```python
 DB_CONFIG = {
     'host': 'localhost',
@@ -98,3 +92,4 @@ The application includes comprehensive error handling for:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details. 
+(cause we love open source)

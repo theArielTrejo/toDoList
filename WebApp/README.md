@@ -8,12 +8,11 @@ A Django-based web application for managing tasks and assignments, sharing the s
 - Role-based access control (Admin/Assigner vs Regular User/Assignee)
 - Task/Assignment management (Create, Read, Update, Delete)
 - Status tracking for assignments
-- Responsive web interface using Bootstrap 5
+- Responsive web interface using Material Design
 
 ## Prerequisites
 
 - Python 3.8 or higher
-- PostgreSQL database
 - Virtual environment (recommended)
 
 ## Setup Instructions
