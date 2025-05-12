@@ -503,7 +503,7 @@ class TaskManagementApp:
         ttk.Label(details_frame, text=assignment[1]).grid(row=0, column=1, sticky=tk.W, pady=5)
 
         ttk.Label(details_frame, text="Due Date:", font=('Helvetica', 10, 'bold')).grid(row=1, column=0, sticky=tk.W, pady=5)
-        ttk.Label(details_frame, text=assignment[2].strftime("%Y-%m-%d")).grid(row=1, column=1, sticky=tk.W, pady=5)
+        ttk.Label(details_frame, text=assignment[2]).grid(row=1, column=1, sticky=tk.W, pady=5)
 
         ttk.Label(details_frame, text="Description:", font=('Helvetica', 10, 'bold')).grid(row=2, column=0, sticky=tk.W, pady=5)
         ttk.Label(details_frame, text=assignment[3] or "No description").grid(row=2, column=1, sticky=tk.W, pady=5)
